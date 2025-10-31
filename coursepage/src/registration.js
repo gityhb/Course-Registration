@@ -11,17 +11,24 @@ const timeSlots = [
   "22:15", "22:40"
 ];
 
+//선택 불가 시간들 (DB 연동 후 코드 수정 예정)
 const bookedTimes = ["12:25", "17:05", "20:10", "22:40"];
-//DB에서 저장된 시간들 (타인이 예약, 추후 수정)
+
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+const sevenDaysFromNow = new Date();
+sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
 
 function Registration(){
-    const [startDate, setStartDate] = useState(new Date());
+    const [startDate, setStartDate] = useState(tomorrow);
     const [selectedTime, setSelectedTime] = useState(null);
 
     return(
         <div className="container mx-auto">
-            <div className="h-20 pl-4 flex items-center border-b border-black">
-                <div className="text-2xl font-bold ">화상영어 수강신청</div>
+            <div className="h-32 pl-10 flex items-center border-b border-black">
+                <div className="text-3xl font-semibold ">화상영어 수강신청</div>
             </div>
 
             <div className="h-16 pt-5 pl-4 flex items-center border-b border-black">
@@ -68,6 +75,8 @@ function Registration(){
                         onChange={(date) => setStartDate(date)} 
                         className="h-11 border border-gray px-3"
                         dateFormat="yyyy년 MM월 dd일"
+                        minDate={tomorrow}
+                        maxDate={sevenDaysFromNow}
                     />
                 </div>
             </div>
@@ -88,8 +97,8 @@ function Registration(){
                                 onClick={() => setSelectedTime(time)}
                                 className={`
                                     p-2 border rounded-md text-sm font-medium
-                                    ${isBooked ? 'text-gray-400 line-through cursor-not-allowed' : 'text-orange-600'}
-                                    ${isSelected ? 'bg-orange-500 text-white' : (isBooked ? 'bg-gray-200' : 'bg-white hover:bg-orange-100')}
+                                    ${isBooked ? 'text-gray-500 line-through cursor-not-allowed' : 'text-black-600'}
+                                    ${isSelected ? 'bg-blue-600 text-white' : (isBooked ? 'bg-gray-300' : 'bg-white hover:bg-gray-100')}
                                 `}
                             >
                                 {time}
@@ -97,6 +106,14 @@ function Registration(){
                         );
                     })}
                 </div>
+            </div>
+            <div className="div h-36 flex items-center justify-center">
+                <button className="bg-blue-600 text-white w-52 px-12 py-3 rounded-md text-lg font-semibold hover:bg-blue-700">
+                    신 청
+                </button>
+                <button className="bg-gray-400 text-white w-52 px-6 py-3 rounded-md text-lg font-semibold border border-gray ml-16 hover:bg-gray-100">
+                    취 소
+                </button>
             </div>
 
         </div>
