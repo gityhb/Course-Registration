@@ -26,7 +26,7 @@ function Registration(){
     const [selectedTime, setSelectedTime] = useState(null);
 
     return(
-        <div className="container mx-auto">
+        <div className="container mx-auto px-40">
             <div className="h-32 pl-10 flex items-center border-b border-black">
                 <div className="text-3xl font-semibold ">화상영어 수강신청</div>
             </div>
