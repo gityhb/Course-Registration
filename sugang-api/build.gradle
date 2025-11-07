@@ -48,7 +48,3 @@ dependencies {
 
     implementation 'com.google.cloud:spring-cloud-gcp-starter-sql-mysql'
 }
-
-tasks.named('test') {
-    enabled = false
-}
