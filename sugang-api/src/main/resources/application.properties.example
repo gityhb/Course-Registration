@@ -1,4 +1,4 @@
-# (이 파일은 예시입니다. 이 내용을 바탕으로 2개의 파일을 만드세요)
+# (이 파일은 예시입니다. 이 내용을 바탕으로 2개의 파일을 만드세요!!)
 # 1. 'application.properties' (GCP 배포용 - Git에 올라가면 안 됨)
 # 2. 'application-local.properties' (로컬 개발용 - Git에 올라가면 안 됨)
 
