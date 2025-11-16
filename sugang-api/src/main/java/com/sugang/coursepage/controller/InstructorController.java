@@ -10,7 +10,6 @@ import com.sugang.coursepage.dto.AvailableTimeDto;
 
 @RestController
 @RequestMapping("/api/instructors")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class InstructorController {
 
