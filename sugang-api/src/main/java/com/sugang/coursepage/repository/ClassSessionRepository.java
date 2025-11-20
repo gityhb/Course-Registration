@@ -7,6 +7,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, Long> {
-    // 특정 날짜의 모든 세션을 찾는 쿼리 메서드
-    List<ClassSession> findBySessionDate(LocalDate sessionDate);
+    // [수정] 날짜(date) AND 강사(instructorFk)가 모두 일치하는 세션만 조회
+    List<ClassSession> findBySessionDateAndInstructorFk(LocalDate sessionDate, Long instructorFk);
 }

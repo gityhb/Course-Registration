@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
@@ -16,78 +16,88 @@ const timeSlots = [
 
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
-
-
 const oneYearFromNow = new Date();
 oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
+//과목, 강사 매핑
+const COURSE_INSTRUCTOR_MAP = {
+    "201": 301, 
+    "202": 302, 
+    "203": 303  
+};
 
 function Registration() {
     const [startDate, setStartDate] = useState(tomorrow);
     const [selectedTime, setSelectedTime] = useState(null);
     const [bookedTimes, setBookedTimes] = useState([]);
     
+    const [selectedCourse, setSelectedCourse] = useState("201");
+    const [selectedDay, setSelectedDay] = useState(1); 
 
-    const [selectedCourse, setSelectedCourse] = useState("201"); //course_fk (201)
-    const [selectedDay, setSelectedDay] = useState(1);  //class_day (1: 월수금, 2: 화목)
+    const currentInstructorId = COURSE_INSTRUCTOR_MAP[selectedCourse];
 
-    // 날짜 변경될 때마다 실행
-    useEffect(() => {
+    const fetchBookedTimes = useCallback(() => {
         const formattedDate = startDate.toISOString().split('T')[0];
 
-        //선택된 날짜의 예약된 시간 조회
-        axios.get(`${API_URL}/api/sessions/booked-times?date=${formattedDate}`)
-            .then(response => {
-                setBookedTimes(response.data);
-                console.log("Booked times:", response.data);
-            })
-            .catch(error => {
-                console.error("Error fetching booked times:", error);
-                setBookedTimes([]);
-            });
+        axios.get(`${API_URL}/api/sessions/booked-times`, {
+            params: {
+                date: formattedDate,
+                instructorId: currentInstructorId
+            }
+        })
+        .then(response => {
+            setBookedTimes(response.data);
+            console.log(`Instructor ${currentInstructorId} booked times updated:`, response.data);
+        })
+        .catch(error => {
+            console.error("Error fetching booked times:", error);
+            setBookedTimes([]); 
+        });
+    }, [startDate, currentInstructorId]); 
 
-    }, [startDate]);
+    useEffect(() => {
+        fetchBookedTimes();
+    }, [fetchBookedTimes]);
 
-    //신청 버튼
+    //신청 버튼 핸들러
     const handleSubmit = async () => {
         if (!selectedTime) {
             alert("수업시간을 선택해주세요.");
             return;
         }
 
-        //DB로 보낼 데이터
         const enrollmentData = {
-            studentFk: 101, //학생 ID
+            studentFk: 101, 
             courseFk: Number(selectedCourse),
-            instructorFk: 301, //강사 ID
+            instructorFk: currentInstructorId,
             startDate: startDate.toISOString().split('T')[0],
             classDay: selectedDay,
             startTime: `${selectedTime}:00`,
-            duration: 20, //수업 시간 (20분)
-            countSession: 32 //수업 횟수 (32회)
+            duration: 20, 
+            countSession: 32 
         };
 
-        console.log("Sending data:", enrollmentData);
-
         try {
-            //수강 신청 API 호출
             await axios.post(`${API_URL}/api/enrollments`, enrollmentData);
             
             alert("수강신청이 완료되었습니다!");
-            window.location.reload(); 
+            
+            setSelectedTime(null);
+            
+            fetchBookedTimes();
 
         } catch (error) {
             console.error("Error creating enrollment:", error);
             alert("신청 중 오류가 발생했습니다.");
+            fetchBookedTimes();
         }
     };
 
     return (
         <div className="container mx-auto px-40">
             <div className="h-32 pl-10 flex items-center border-b border-black">
-                <div className="text-3xl font-semibold ">화상영어 수강신청</div>
+                 <div className="text-3xl font-semibold ">화상영어 수강신청</div>
             </div>
-
             <div className="h-16 pt-5 pl-4 flex items-center border-b border-black">
                 <div className="text-sm font-semibold text-blue-400">※ 첫 수업은 레벨테스트로 진행됩니다.</div>
             </div>
@@ -102,15 +112,18 @@ function Registration() {
                             id="course" 
                             name="course" 
                             className="px-2 w-80 h-9 border border-gray"
-                            value={selectedCourse}
-                            onChange={(e) => setSelectedCourse(e.target.value)}
+                            value={selectedCourse} 
+                            onChange={(e) => {
+                                setSelectedCourse(e.target.value);
+                                setSelectedTime(null); 
+                            }} 
                         >
                             <option value="201">스마트파닉스</option>
                             <option value="202">여행영어</option>
                             <option value="203">프리토킹</option>
                         </select>
                         <div className="text-sm font-semibold text-blue-400 pt-1">
-                            ※ 수업과정은 강사님의 추천과정에 의해 변경될 수 있습니다.
+                            ※ 과목에 따라 담당 강사님이 배정됩니다.
                         </div>
                     </div>
                 </div>
@@ -125,8 +138,8 @@ function Registration() {
                         id="day" 
                         name="day" 
                         className="px-2 w-80 h-9 border border-gray"
-                        value={selectedDay}
-                        onChange={(e) => setSelectedDay(Number(e.target.value))}
+                        value={selectedDay} 
+                        onChange={(e) => setSelectedDay(Number(e.target.value))} 
                     >
                         <option value="1">월, 수, 금</option>
                         <option value="2">화, 목</option>
@@ -143,12 +156,12 @@ function Registration() {
                         selected={startDate}
                         onChange={(date) => {
                             setStartDate(date);
-                            setSelectedTime(null);
+                            setSelectedTime(null); 
                         }}
                         className="h-11 border border-gray px-3"
                         dateFormat="yyyy년 MM월 dd일"
                         minDate={tomorrow}
-                        maxDate={oneYearFromNow}
+                        maxDate={oneYearFromNow} 
                     />
                 </div>
             </div>
@@ -183,7 +196,7 @@ function Registration() {
             <div className="div h-36 flex items-center justify-center">
                 <button 
                     className="bg-blue-600 text-white w-52 px-12 py-3 rounded-md text-lg font-semibold hover:bg-blue-700"
-                    onClick={handleSubmit}
+                    onClick={handleSubmit} 
                 >
                     신 청
                 </button>
@@ -191,7 +204,6 @@ function Registration() {
                     취 소
                 </button>
             </div>
-
         </div>
     );
 }

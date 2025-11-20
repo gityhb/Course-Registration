@@ -19,9 +19,11 @@ public class ClassSessionController {
     // 특정 날짜에 이미 예약된 시간 조회 API
     @GetMapping("/booked-times")
     public ResponseEntity<List<String>> getBookedTimes(
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam("instructorId") Long instructorId
     ) {
-        List<String> bookedTimes = classSessionService.getBookedTimes(date);
+        // [수정] 서비스에 강사 ID 전달
+        List<String> bookedTimes = classSessionService.getBookedTimes(date, instructorId);
         return ResponseEntity.ok(bookedTimes);
     }
 }
