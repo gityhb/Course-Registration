@@ -17,12 +17,13 @@ public class ClassSessionService {
     private final ClassSessionRepository classSessionRepository;
     private final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
-    public List<String> getBookedTimes(LocalDate date) {
-        List<ClassSession> sessions = classSessionRepository.findBySessionDate(date);
+    public List<String> getBookedTimes(LocalDate date, Long instructorId) {
+        // [수정] 리포지토리 호출 시 강사 ID도 함께 전달
+        List<ClassSession> sessions = classSessionRepository.findBySessionDateAndInstructorFk(date, instructorId);
         
         return sessions.stream()
                 .map(session -> session.getSessionTime().format(TIME_FORMATTER))
-                .distinct() //중복 시간 제거
+                .distinct()
                 .collect(Collectors.toList());
     }
 }
