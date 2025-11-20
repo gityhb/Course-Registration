@@ -1,8 +1,11 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import axios from "axios";
+
+const API_URL = "https://sugang-api-429428399883.asia-northeast3.run.app"; 
 
 const timeSlots = [
   "12:00", "12:25", "12:50", "13:15", "13:40", "14:05", "14:30", "15:00",
@@ -11,21 +14,75 @@ const timeSlots = [
   "22:15", "22:40"
 ];
 
-//선택 불가 시간들 (DB 연동 후 코드 수정 예정)
-const bookedTimes = ["12:25", "17:05", "20:10", "22:40"];
-
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
 
-const sevenDaysFromNow = new Date();
-sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+const oneYearFromNow = new Date();
+oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
 
-function Registration(){
+function Registration() {
     const [startDate, setStartDate] = useState(tomorrow);
     const [selectedTime, setSelectedTime] = useState(null);
+    const [bookedTimes, setBookedTimes] = useState([]);
+    
 
-    return(
+    const [selectedCourse, setSelectedCourse] = useState("201"); //course_fk (201)
+    const [selectedDay, setSelectedDay] = useState(1);  //class_day (1: 월수금, 2: 화목)
+
+    // 날짜 변경될 때마다 실행
+    useEffect(() => {
+        const formattedDate = startDate.toISOString().split('T')[0];
+
+        //선택된 날짜의 예약된 시간 조회
+        axios.get(`${API_URL}/api/sessions/booked-times?date=${formattedDate}`)
+            .then(response => {
+                setBookedTimes(response.data);
+                console.log("Booked times:", response.data);
+            })
+            .catch(error => {
+                console.error("Error fetching booked times:", error);
+                setBookedTimes([]);
+            });
+
+    }, [startDate]);
+
+    //신청 버튼
+    const handleSubmit = async () => {
+        if (!selectedTime) {
+            alert("수업시간을 선택해주세요.");
+            return;
+        }
+
+        //DB로 보낼 데이터
+        const enrollmentData = {
+            studentFk: 101, //학생 ID
+            courseFk: Number(selectedCourse),
+            instructorFk: 301, //강사 ID
+            startDate: startDate.toISOString().split('T')[0],
+            classDay: selectedDay,
+            startTime: `${selectedTime}:00`,
+            duration: 20, //수업 시간 (20분)
+            countSession: 32 //수업 횟수 (32회)
+        };
+
+        console.log("Sending data:", enrollmentData);
+
+        try {
+            //수강 신청 API 호출
+            await axios.post(`${API_URL}/api/enrollments`, enrollmentData);
+            
+            alert("수강신청이 완료되었습니다!");
+            window.location.reload(); 
+
+        } catch (error) {
+            console.error("Error creating enrollment:", error);
+            alert("신청 중 오류가 발생했습니다.");
+        }
+    };
+
+    return (
         <div className="container mx-auto px-40">
             <div className="h-32 pl-10 flex items-center border-b border-black">
                 <div className="text-3xl font-semibold ">화상영어 수강신청</div>
@@ -41,10 +98,16 @@ function Registration(){
                 </div>
                 <div className="text-xl font-semibold pt-3 px-5 flex items-center">
                     <div className="flex flex-col gap-1">
-                        <select id="course" name="course" className="px-2 w-80 h-9 border border-gray">
-                            <option value="samrteng" selected>스마트파닉스</option>
-                            <option value="traveleng">여행영어</option>
-                            <option value="freeeng">프리토킹</option>
+                        <select 
+                            id="course" 
+                            name="course" 
+                            className="px-2 w-80 h-9 border border-gray"
+                            value={selectedCourse}
+                            onChange={(e) => setSelectedCourse(e.target.value)}
+                        >
+                            <option value="201">스마트파닉스</option>
+                            <option value="202">여행영어</option>
+                            <option value="203">프리토킹</option>
                         </select>
                         <div className="text-sm font-semibold text-blue-400 pt-1">
                             ※ 수업과정은 강사님의 추천과정에 의해 변경될 수 있습니다.
@@ -58,9 +121,15 @@ function Registration(){
                     수업 요일
                 </div>
                 <div className="text-xl font-semibold px-5 flex items-center">
-                    <select id="day" name="day" className="px-2 w-80 h-9 border border-gray">
-                        <option value="mwfday" selected>월, 수, 금</option>
-                        <option value="ttday">화, 목</option>
+                    <select 
+                        id="day" 
+                        name="day" 
+                        className="px-2 w-80 h-9 border border-gray"
+                        value={selectedDay}
+                        onChange={(e) => setSelectedDay(Number(e.target.value))}
+                    >
+                        <option value="1">월, 수, 금</option>
+                        <option value="2">화, 목</option>
                     </select>
                 </div>
             </div>
@@ -71,12 +140,15 @@ function Registration(){
                 </div>
                 <div className="text-xl font-semibold px-5 flex items-center">
                     <DatePicker
-                        selected={startDate} 
-                        onChange={(date) => setStartDate(date)} 
+                        selected={startDate}
+                        onChange={(date) => {
+                            setStartDate(date);
+                            setSelectedTime(null);
+                        }}
                         className="h-11 border border-gray px-3"
                         dateFormat="yyyy년 MM월 dd일"
                         minDate={tomorrow}
-                        maxDate={sevenDaysFromNow}
+                        maxDate={oneYearFromNow}
                     />
                 </div>
             </div>
@@ -107,8 +179,12 @@ function Registration(){
                     })}
                 </div>
             </div>
+            
             <div className="div h-36 flex items-center justify-center">
-                <button className="bg-blue-600 text-white w-52 px-12 py-3 rounded-md text-lg font-semibold hover:bg-blue-700">
+                <button 
+                    className="bg-blue-600 text-white w-52 px-12 py-3 rounded-md text-lg font-semibold hover:bg-blue-700"
+                    onClick={handleSubmit}
+                >
                     신 청
                 </button>
                 <button className="bg-gray-400 text-white w-52 px-6 py-3 rounded-md text-lg font-semibold border border-gray ml-16 hover:bg-gray-100">
