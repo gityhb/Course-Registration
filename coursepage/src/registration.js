@@ -19,7 +19,6 @@ tomorrow.setDate(tomorrow.getDate() + 1);
 const oneYearFromNow = new Date();
 oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
-//과목, 강사 매핑
 const COURSE_INSTRUCTOR_MAP = {
     "201": 301, 
     "202": 302, 
@@ -27,7 +26,7 @@ const COURSE_INSTRUCTOR_MAP = {
 };
 
 function Registration() {
-    const [startDate, setStartDate] = useState(tomorrow);
+    const [startDate, setStartDate] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
     const [bookedTimes, setBookedTimes] = useState([]);
     
@@ -37,6 +36,8 @@ function Registration() {
     const currentInstructorId = COURSE_INSTRUCTOR_MAP[selectedCourse];
 
     const fetchBookedTimes = useCallback(() => {
+        if (!startDate) return;
+
         const formattedDate = startDate.toISOString().split('T')[0];
 
         axios.get(`${API_URL}/api/sessions/booked-times`, {
@@ -59,8 +60,30 @@ function Registration() {
         fetchBookedTimes();
     }, [fetchBookedTimes]);
 
-    //신청 버튼 핸들러
+    //달력 날짜 필터링
+    const isDateAvailable = (date) => {
+        const day = date.getDay(); //0(일) ~ 6(토)
+        
+        if (selectedDay === 1) {
+            return day === 1 || day === 3 || day === 5;
+        } 
+        else {
+            return day === 2 || day === 4;
+        }
+    };
+
+    //수업 요일 변경 핸들러
+    const handleDayChange = (e) => {
+        setSelectedDay(Number(e.target.value));
+        setStartDate(null);    //날짜 초기화
+        setSelectedTime(null); //시간 초기화
+    };
+
     const handleSubmit = async () => {
+        if (!startDate) {
+            alert("수업 시작일을 선택해주세요.");
+            return;
+        }
         if (!selectedTime) {
             alert("수업시간을 선택해주세요.");
             return;
@@ -83,7 +106,6 @@ function Registration() {
             alert("수강신청이 완료되었습니다!");
             
             setSelectedTime(null);
-            
             fetchBookedTimes();
 
         } catch (error) {
@@ -102,6 +124,7 @@ function Registration() {
                 <div className="text-sm font-semibold text-blue-400">※ 첫 수업은 레벨테스트로 진행됩니다.</div>
             </div>
 
+            {/* 과정 선택 */}
             <div className="h-24 flex items-center border-b border-black">
                 <div className="h-full text-xl font-semibold border-r border-black flex items-center bg-gray-200 w-52 justify-center">
                     과정
@@ -129,6 +152,7 @@ function Registration() {
                 </div>
             </div>
 
+            {/* 수업 요일 선택 */}
             <div className="h-20 flex items-center border-b border-black">
                 <div className="h-full text-xl font-semibold border-r border-black flex items-center bg-gray-200 w-52 justify-center">
                     수업 요일
@@ -139,7 +163,7 @@ function Registration() {
                         name="day" 
                         className="px-2 w-80 h-9 border border-gray"
                         value={selectedDay} 
-                        onChange={(e) => setSelectedDay(Number(e.target.value))} 
+                        onChange={handleDayChange}
                     >
                         <option value="1">월, 수, 금</option>
                         <option value="2">화, 목</option>
@@ -147,6 +171,7 @@ function Registration() {
                 </div>
             </div>
 
+            {/* 수업 시작일 선택 */}
             <div className="h-20 flex items-center border-b border-black">
                 <div className="h-full text-xl font-semibold border-r border-black flex items-center bg-gray-200 w-52 justify-center">
                     수업 시작일
@@ -161,11 +186,15 @@ function Registration() {
                         className="h-11 border border-gray px-3"
                         dateFormat="yyyy년 MM월 dd일"
                         minDate={tomorrow}
-                        maxDate={oneYearFromNow} 
+                        maxDate={oneYearFromNow}
+                        //요일에 맞지 않는 날짜 비활성화
+                        filterDate={isDateAvailable} 
+                        placeholderText="날짜를 선택하세요"
                     />
                 </div>
             </div>
 
+            {/* 수업시간 선택 */}
             <div className="flex border-b border-black">
                 <div className="text-xl font-semibold border-r border-black flex items-center bg-gray-200 w-52 justify-center">
                     수업시간 선택
@@ -195,12 +224,12 @@ function Registration() {
             
             <div className="div h-36 flex items-center justify-center">
                 <button 
-                    className="bg-blue-600 text-white w-52 px-12 py-3 rounded-md text-lg font-semibold hover:bg-blue-700"
+                    className="bg-blue-600 text-white w-52 px-12 py-3 rounded-md text-lg font-semibold"
                     onClick={handleSubmit} 
                 >
                     신 청
                 </button>
-                <button className="bg-gray-400 text-white w-52 px-6 py-3 rounded-md text-lg font-semibold border border-gray ml-16 hover:bg-gray-100">
+                <button className="bg-gray-400 text-white w-52 px-6 py-3 rounded-md text-lg font-semibold border border-gray ml-16">
                     취 소
                 </button>
             </div>
