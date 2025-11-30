@@ -5,6 +5,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 
+//백엔드 주소
 const API_URL = "https://sugang-api-429428399883.asia-northeast3.run.app"; 
 
 const timeSlots = [
@@ -38,7 +39,10 @@ function Registration() {
     const fetchBookedTimes = useCallback(() => {
         if (!startDate) return;
 
-        const formattedDate = startDate.toISOString().split('T')[0];
+        const year = startDate.getFullYear();
+        const month = String(startDate.getMonth() + 1).padStart(2, "0");
+        const day = String(startDate.getDate()).padStart(2, "0");
+        const formattedDate = `${year}-${month}-${day}`;
 
         axios.get(`${API_URL}/api/sessions/booked-times`, {
             params: {
@@ -47,8 +51,9 @@ function Registration() {
             }
         })
         .then(response => {
-            setBookedTimes(response.data);
-            console.log(`Instructor ${currentInstructorId} booked times updated:`, response.data);
+            const times = response.data.map(time => time.slice(0, 5));
+            setBookedTimes(times);
+            console.log(`Instructor ${currentInstructorId} booked times updated:`, times);
         })
         .catch(error => {
             console.error("Error fetching booked times:", error);
@@ -60,25 +65,20 @@ function Registration() {
         fetchBookedTimes();
     }, [fetchBookedTimes]);
 
-    //달력 날짜 필터링
+    //날짜 필터링
     const isDateAvailable = (date) => {
-        const day = date.getDay(); //0(일) ~ 6(토)
-        
-        if (selectedDay === 1) {
-            return day === 1 || day === 3 || day === 5;
-        } 
-        else {
-            return day === 2 || day === 4;
-        }
+        const day = date.getDay(); 
+        if (selectedDay === 1) return day === 1 || day === 3 || day === 5;
+        else return day === 2 || day === 4;
     };
 
-    //수업 요일 변경 핸들러
     const handleDayChange = (e) => {
         setSelectedDay(Number(e.target.value));
-        setStartDate(null);    //날짜 초기화
-        setSelectedTime(null); //시간 초기화
+        setStartDate(null);    
+        setSelectedTime(null); 
     };
 
+    //제출
     const handleSubmit = async () => {
         if (!startDate) {
             alert("수업 시작일을 선택해주세요.");
@@ -89,11 +89,17 @@ function Registration() {
             return;
         }
 
+        // 한국 시간 기준 날짜 생성 (저장용)
+        const year = startDate.getFullYear();
+        const month = String(startDate.getMonth() + 1).padStart(2, "0");
+        const day = String(startDate.getDate()).padStart(2, "0");
+        const localStartDate = `${year}-${month}-${day}`;
+
         const enrollmentData = {
             studentFk: 101, 
             courseFk: Number(selectedCourse),
             instructorFk: currentInstructorId,
-            startDate: startDate.toISOString().split('T')[0],
+            startDate: localStartDate, 
             classDay: selectedDay,
             startTime: `${selectedTime}:00`,
             duration: 20, 
@@ -105,8 +111,9 @@ function Registration() {
             
             alert("수강신청이 완료되었습니다!");
             
-            setSelectedTime(null);
-            fetchBookedTimes();
+            // ★ 여기가 핵심! 새로고침(reload) 대신 상태만 초기화 ★
+            setSelectedTime(null); // 1. 선택했던 시간만 지움 (날짜는 유지 -> 연속 신청 가능)
+            fetchBookedTimes();    // 2. 예약된 시간 다시 불러옴 (방금 신청한 거 회색으로 변함)
 
         } catch (error) {
             console.error("Error creating enrollment:", error);
@@ -187,7 +194,6 @@ function Registration() {
                         dateFormat="yyyy년 MM월 dd일"
                         minDate={tomorrow}
                         maxDate={oneYearFromNow}
-                        //요일에 맞지 않는 날짜 비활성화
                         filterDate={isDateAvailable} 
                         placeholderText="날짜를 선택하세요"
                     />
