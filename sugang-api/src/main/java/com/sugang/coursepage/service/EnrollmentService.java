@@ -3,10 +3,12 @@ package com.sugang.coursepage.service;
 import com.sugang.coursepage.dto.EnrollmentRequestDto;
 import com.sugang.coursepage.entity.ClassSession;
 import com.sugang.coursepage.entity.Enrollment;
+import com.sugang.coursepage.exception.DuplicateBookingException;
 import com.sugang.coursepage.repository.ClassSessionRepository;
 import com.sugang.coursepage.repository.EnrollmentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
@@ -56,7 +58,12 @@ public class EnrollmentService {
             sessionsToSave.add(session);
         }
 
-        classSessionRepository.saveAll(sessionsToSave);
+        //동시에 같은 시간을 신청하면 유니크 제약에 걸림 -> Enrollment까지 함께 롤백
+        try {
+            classSessionRepository.saveAllAndFlush(sessionsToSave);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateBookingException("이미 신청된 시간입니다.", e);
+        }
 
         return savedEnrollment;
     }

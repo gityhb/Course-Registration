@@ -12,7 +12,14 @@ import java.time.LocalTime;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "class_sessions")
+//같은 강사의 같은 날짜·시간에는 수업이 하나만 존재하도록 DB에서 보장
+@Table(
+        name = "class_sessions",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_class_sessions_instructor_slot",
+                columnNames = {"instructorFk", "sessionDate", "sessionTime"}
+        )
+)
 public class ClassSession {
 
     @Id

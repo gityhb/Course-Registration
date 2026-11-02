@@ -117,7 +117,13 @@ function Registration() {
 
         } catch (error) {
             console.error("Error creating enrollment:", error);
-            alert("신청 중 오류가 발생했습니다.");
+            if (error.response?.status === 409) {
+                //다른 사람이 먼저 같은 시간을 신청한 경우
+                alert("이미 신청된 시간입니다. 다른 시간을 선택해주세요.");
+                setSelectedTime(null);
+            } else {
+                alert("신청 중 오류가 발생했습니다.");
+            }
             fetchBookedTimes();
         }
     };
