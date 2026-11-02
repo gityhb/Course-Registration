@@ -1,8 +1,10 @@
-### 🛒 수강신청 시스템 (Course Registration System)
+### 📅 화상영어 수강신청 시스템 (Course Registration)
 
-대규모 트래픽이 발생하는 대학교 수강신청 환경을 가정하여 설계한 풀스택 웹 애플리케이션입니다.
+과정, 수업 요일, 시작일, 시간을 고르면 **32회차 수업 일정이 자동으로 만들어지는** 화상영어 수강신청 웹 애플리케이션입니다.
 
-더존ICT그룹 인턴십 과제로 총 6주간 진행되었으며, 요구사항 분석부터 프론트엔드/백엔드 구현, 클라우드 환경 배포까지 웹 개발의 전체 사이클을 거쳐 완성되었습니다. 사용자(학생)가 장바구니에 강의를 담고 실시간으로 수강신청을 완료할 수 있도록 지원합니다.
+더존ICT그룹 인턴십 과제로 6주 동안 진행했습니다. 매주 피드백을 받아 반영하며 요구사항 분석, 프론트엔드·백엔드 구현, 클라우드 배포까지 혼자 진행했습니다.
+
+> 과제 기간에는 Vercel(프론트엔드)과 GCP Cloud Run + Cloud SQL(백엔드)에 배포해 운영했습니다. 현재는 비용 문제로 서버를 내린 상태입니다.
 
 <br>
 
@@ -15,11 +17,17 @@
 
 ## ✨ 주요 기능
 
-* **실시간 수강신청 및 장바구니:** Axios를 활용한 REST API 통신으로 지연 없이 실시간 잔여 좌석 및 강의 목록을 렌더링합니다.
-* **직관적인 사용자 인터페이스:** React Hooks(`useState`, `useEffect`, `useCallback`)를 활용하여 렌더링을 최적화하고, Tailwind CSS로 깔끔한 UI를 구현했습니다.
-* **안정적인 비즈니스 로직 처리:** Spring Boot 백엔드 서버를 통해 수강신청, 예비 담기 등 핵심 로직의 데이터 정합성을 철저하게 관리합니다.
-* **클라우드 인프라 배포:** 프론트엔드와 백엔드를 각각 Vercel과 Google Cloud Run을 통해 성공적으로 분리 배포했습니다.
-* **구조화된 코드 관리:** `public`과 `src` 폴더를 루트에 명확히 분리하여 체계적인 레포지토리 형상 관리를 유지했습니다.
+* **32회차 수업 일정 자동 생성**
+  * 시작일과 요일 패턴(월수금 / 화목)을 받아, 주말을 빼고 32회의 수업 날짜를 계산합니다.
+  * 신청 1건과 수업 32건을 하나의 트랜잭션으로 저장해서, 중간에 실패하면 전부 롤백됩니다.
+* **강사별 예약 시간 관리**
+  * 과정을 고르면 담당 강사가 자동으로 배정됩니다.
+  * 해당 강사의 날짜별 예약된 시간을 조회해, 화면에서 이미 찬 시간은 선택할 수 없게 막습니다.
+* **동시 신청 시 중복 예약 방지**
+  * 같은 강사의 같은 날짜·시간에는 수업이 하나만 존재하도록 DB 유니크 제약으로 보장합니다.
+  * 동시에 신청이 들어와도 한 명만 성공하고, 나머지는 `409 Conflict`를 받습니다.
+* **분리 배포**
+  * 프론트엔드는 Vercel, 백엔드는 Google Cloud Run, DB는 Cloud SQL(MySQL)에 배포했습니다.
 
 <br>
 
@@ -27,50 +35,104 @@
 
 ## 🛠️ 기술 스택
 
-* **Frontend:** React.js, Tailwind CSS, Axios
-* **Backend:** Spring Boot (Java)
-* **Database:** MySQL, GCP Cloud SQL
-* **Deployment:** Vercel (Frontend), Google Cloud Run (Backend)
-* **Version Control:** Git, GitHub
+* **Backend:** Java 17, Spring Boot 3.2, Spring Data JPA, springdoc-openapi(Swagger)
+* **Database:** MySQL (GCP Cloud SQL)
+* **Test:** JUnit 5, H2 (MySQL 호환 모드)
+* **Frontend:** React, Tailwind CSS, Axios, react-datepicker
+* **Deployment:** Google Cloud Run (Backend), Vercel (Frontend)
 
 <br>
 
 ---
 
-## 🚀 프로젝트 실행 방법
+## 📡 API
+
+| Method | URL | 설명 |
+|---|---|---|
+| `POST` | `/api/enrollments` | 수강 신청 (32회차 수업 생성). 이미 찬 시간이면 `409 Conflict` |
+| `GET` | `/api/sessions/booked-times?date=&instructorId=` | 강사의 해당 날짜 예약된 시간 목록 |
+| `GET` | `/api/instructors/{instructorId}/available-times` | 강사의 수업 가능 시간 |
+
+서버를 실행한 뒤 `/swagger-ui/index.html`에서 전체 명세를 볼 수 있습니다.
+
+<br>
+
+---
+
+## 📁 폴더 구조
+
+```
+Course-Registration
+├── coursepage   # 프론트엔드 (React)
+└── sugang-api   # 백엔드 (Spring Boot)
+```
+
+<br>
+
+---
+
+## 🚀 실행 방법
 
 ### 1. 저장소 클론
 
 ```bash
-git clone [https://github.com/gityhb/Course-Registration.git](https://github.com/gityhb/Course-Registration.git)
+git clone https://github.com/gityhb/Course-Registration.git
 cd Course-Registration
 ```
 
-### 2. Frontend 실행 (React)
+### 2. 백엔드 실행 (Spring Boot, JDK 17)
+
+`sugang-api/src/main/resources/application.properties.example`을 참고해 로컬 MySQL 접속 정보를 담은 `application.properties`를 만든 뒤 실행합니다. 이 파일은 Git에 올라가지 않습니다.
 
 ```bash
-# 의존성 패키지 설치
-npm install
-
-# 로컬 서버 실행
-npm start
+cd sugang-api
+./gradlew bootRun
 ```
 
-### 3. Backend 실행 (Spring Boot)
+테스트는 인메모리 DB(H2)를 쓰기 때문에 MySQL 없이 실행할 수 있습니다.
 
 ```bash
-# 별도의 Java IDE (IntelliJ IDEA 등)에서 프로젝트를 열람한 후,
-# Gradle/Maven을 통해 빌드 및 애플리케이션(Application.java) 실행
+./gradlew test
+```
+
+### 3. 프론트엔드 실행 (React)
+
+`coursepage/src/registration.js`의 `API_URL`을 로컬 백엔드 주소(`http://localhost:8080`)로 바꾼 뒤 실행합니다.
+
+```bash
+cd coursepage
+npm install
+npm start
 ```
 
 <br>
 
 ---
 
-## 🧠 핵심 문제 해결
+## 🧠 문제 해결
 
-* **문제 1**: 프로젝트 초기 세팅 시, React의 `public` 및 `src` 폴더가 루트 디렉토리에 위치하지 않아 배포 및 GitHub 레포지토리 관리에 구조적인 어려움이 발생했습니다.
-* **해결 1**: 로컬 환경에서 디렉토리 구조를 올바르게 재배치한 후, 레포지토리를 재생성하고 코드를 푸시하는 방식으로 해결하여 직관적이고 효율적인 형상 관리 환경을 구축했습니다.
+### 1. 동시 신청 시 같은 시간이 중복 예약되는 문제
 
-* **문제 2**: 클라우드 환경에서 프론트엔드와 백엔드, 그리고 데이터베이스가 안정적으로 통신해야 했습니다.
-* **해결 2**: GCP Cloud SQL을 도입하여 MySQL 데이터베이스를 클라우드에 띄우고, 백엔드는 Google Cloud Run, 프론트엔드는 Vercel을 사용하여 각 서비스의 특성에 맞는 맞춤형 인프라 배포를 진행하여 안정적인 통신 환경을 구축했습니다.
+* **문제**
+  * 화면에서는 이미 찬 시간을 막았지만, 서버는 예약 여부를 확인하지 않고 저장만 하고 있었습니다.
+  * 두 사람이 거의 동시에 같은 시간을 신청하면 둘 다 성공할 수 있었습니다.
+* **재현**
+  * 10개 스레드가 같은 강사, 같은 시간에 한꺼번에 신청하는 테스트를 작성했습니다.
+  * 수정 전에는 10건이 모두 성공했습니다.
+* **해결**
+  * "먼저 조회하고 비어 있으면 저장"하는 방식은 두 요청이 동시에 조회하면 둘 다 통과하기 때문에 쓰지 않았습니다.
+  * 대신 `class_sessions`의 (강사, 날짜, 시간)에 **유니크 제약**을 걸어 DB가 최종적으로 막게 했습니다. 서버를 여러 대로 늘려도 그대로 동작합니다.
+  * 제약 위반은 `DuplicateBookingException`으로 바꿔 `409 Conflict`로 응답합니다. 신청과 수업 32건이 같은 트랜잭션이라 실패한 신청은 남지 않습니다.
+* **결과**
+  * 같은 테스트에서 1건만 성공하고, 저장된 데이터도 신청 1건과 수업 32건으로 정확했습니다.
+  * 이 과정에서 `build.gradle`에 `useJUnitPlatform()`이 빠져 테스트가 한 번도 실행되지 않던 설정도 찾아 고쳤습니다.
+
+### 2. 분리 배포 후 CORS 오류
+
+* **문제:** 프론트엔드(Vercel)와 백엔드(Cloud Run)를 서로 다른 도메인에 배포하자 브라우저가 API 요청을 막았습니다.
+* **해결:** 전역 CORS 설정(`WebConfig`)을 추가하고 배포 도메인을 허용 목록에 넣었습니다.
+
+### 3. 설정 파일에 DB 비밀번호가 커밋된 문제
+
+* **문제:** 배포용 설정 파일에 DB 비밀번호가 그대로 들어간 채 공개 저장소에 올라가 있었습니다.
+* **해결:** 비밀번호를 환경변수(`DB_PASSWORD`)로 분리하고, `git filter-repo`로 커밋 기록 전체에서 지웠습니다.
